@@ -1,0 +1,158 @@
+/**Logging - Simple (Stateless)**/
+
+' Default usage - logs to C:\Temp\CliReportDebug_20251011.log
+Code.WriteLog("This is a test message")
+
+' Custom filepath - logs to D:\Logs\CliReportDebug_20251011.log
+Code.WriteLog("Custom path message", "D:\Logs")
+
+' Custom filepath and filename - logs to D:\Logs\MyReport_20251011.log
+Code.WriteLog("Custom file message", "D:\Logs", "MyReport")
+
+//In Rdlc Report
+= Code.WriteLog("Report generated successfully")
+= Code.WriteLog("Processing GL: " & Fields!GLId.Value, "C:\Logs", "GeneralLedger")
+
+/**Logging - Simple**/
+
+
+/**Logging - Cached (Better Performance)**/
+
+' For multiple log entries in same report - more efficient
+Code.WriteLogCached("Starting report processing")
+Code.WriteLogCached("Processing item 1")
+Code.WriteLogCached("Processing item 2")
+Code.WriteLogCached("Report completed")
+
+//In Rdlc Report
+= Code.WriteLogCached("Processing: " & Fields!CustomerName.Value)
+= Code.WriteLogCached("Total Amount: " & Fields!Amount.Value, "C:\ReportLogs", "SalesReport")
+
+/**Logging - Cached**/
+
+
+/**Global Data Management - SetGlobalData**/
+
+' In C/AL or AL - Create key-value list with Chr(177) separator
+local procedure GetGlobalDataFields() KeyValueList : Text
+begin
+    AddKeyValue(KeyValueList, 'CompanyName', CompanyInfo.Name);
+AddKeyValue(KeyValueList, 'CompanyAddress', CompanyInfo.Address);
+AddKeyValue(KeyValueList, 'ReportDate', Format(Today));
+AddKeyValue(KeyValueList, 'ReportTitle', 'Sales Invoice');
+end;
+
+' Add to dataset column
+column(GlobalData; GetGlobalDataFields())
+
+//In Rdlc Report - Hidden Tablix Cell
+= Code.SetGlobalData(Fields!GlobalData.Value)
+
+/**Global Data Management - SetGlobalData**/
+
+
+/**Global Data Management - GetVal**/
+
+//In Rdlc Report - Get data by name (case-insensitive)
+= Code.GetVal("CompanyName")'
+= Code.GetVal("CompanyAddress")'
+= Code.GetVal("ReportDate")'
+= Code.GetVal("ReportTitle")'
+
+//Get by numeric index (1-based)
+= Code.GetVal(1)'
+= Code.GetVal(2)'
+
+' Note: End with apostrophe (') to preserve arguments when copy/pasting
+
+/**Global Data Management - GetVal**/
+
+
+/**NAV Way - SetData (Legacy)**/
+
+//In Rdlc Report - Hidden Tablix Cell (using numbered groups)
+=Code.SetData(Fields!GlobalData.Value, 1)
+=Code.SetData(Fields!HeaderData.Value, 2)
+=Code.SetData(Fields!FooterData.Value, 3)
+
+/**NAV Way - SetData**/
+
+
+/**NAV Way - GetData (Legacy)**/
+
+//In Rdlc Report - Get data by position number and group
+=Code.GetData(1, 1)  ' First value from Data1
+=Code.GetData(2, 1)  ' Second value from Data1
+=Code.GetData(3, 1)  ' Third value from Data1
+
+=Code.GetData(1, 2)  ' First value from Data2
+=Code.GetData(2, 2)  ' Second value from Data2
+
+' Note: Position-based access requires counting items in the list
+' Consider using Code.GetVal("KeyName") instead for better readability
+
+/**NAV Way - GetData**/ Default usage - logs to C:\Temp\CliReportDebug_20251011.log
+Code.WriteLog("This is a test message")
+
+' Custom filepath - logs to D:\Logs\CliReportDebug_20251011.log
+Code.WriteLog("Custom path message", "D:\Logs")
+
+' Custom filepath and filename - logs to D:\Logs\MyReport_20251011.log
+Code.WriteLog("Custom file message", "D:\Logs", "MyReport")
+
+//In Rdlc Report
+= Code.WriteLog("Report generated successfully")
+= Code.WriteLog("Processing GL: " & Fields!GLId.Value, "C:\Logs", "GeneralLedger")
+
+/**Logging**/
+
+
+/**Multi line Input**/
+
+Dim result As String = ConcatenateNonEmptyWithCrLf(New String() {"Hello", "", "World", "This", "Is", "", "VB.NET"})
+Console.WriteLine(result)
+
+//In Rdlc Report
+= Code.ConcatenateNonEmptyWithCrLf(
+New String() {
+    (Lookup(Fields!GLId.Value, Fields!GlId.Value, Fields!GlName.Value, "MGeneralLedgers")),
+(IIf(RowNumber(Nothing) > 1 Or Trim(Fields!PayeeNote.Value) = "", "", Fields!PayeeNote.Value)), 
+(IIf(Trim(Fields!Narration.Value) = "", "", Fields!Narration.Value)),
+(IIf(RowNumber(Nothing) > 1 Or Trim(Fields!MainNarration.Value) = "", "", Fields!MainNarration.Value))})
+
+/**Multi line Input**/
+
+Dim result As String = ConcatenateNonEmptyWithCrLfAndDelimiter(New String() {"Hello", "", "World", "This", "Is", "", "VB.NET"},",")
+Console.WriteLine(result)
+
+//In Rdlc Report
+= Code.ConcatenateNonEmptyWithCrLfAndDelimiter(
+New String() {
+    (Lookup(Fields!GLId.Value, Fields!GlId.Value, Fields!GlName.Value, "MGeneralLedgers")),
+(IIf(RowNumber(Nothing) > 1 Or Trim(Fields!PayeeNote.Value) = "", "", Fields!PayeeNote.Value)), 
+(IIf(Trim(Fields!Narration.Value) = "", "", Fields!Narration.Value)),
+(IIf(RowNumber(Nothing) > 1 Or Trim(Fields!MainNarration.Value) = "", "", Fields!MainNarration.Value))},",")
+
+/**Multi line Input**/
+
+Dim result As String = ConcatenateNonEmptyWithDelimiter(New String() {"Hello", "", "World", "This", "Is", "", "VB.NET"},",")
+Console.WriteLine(result)
+
+//In Rdlc Report
+= Code.ConcatenateNonEmptyWithDelimiter(
+New String() {
+    (Lookup(Fields!GLId.Value, Fields!GlId.Value, Fields!GlName.Value, "MGeneralLedgers")),
+(IIf(RowNumber(Nothing) > 1 Or Trim(Fields!PayeeNote.Value) = "", "", Fields!PayeeNote.Value)), 
+(IIf(Trim(Fields!Narration.Value) = "", "", Fields!Narration.Value)),
+(IIf(RowNumber(Nothing) > 1 Or Trim(Fields!MainNarration.Value) = "", "", Fields!MainNarration.Value))},",")
+
+/**Multi line Input**/
+/**Multi line Input**/
+
+
+/**Number To Words**/
+
+//In Rdlc
+= Code.ToWordsIn(55225)
+
+/**Number To Words**/

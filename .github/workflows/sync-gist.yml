@@ -9,6 +9,7 @@ on:
       - 'RdlcReportCode_WithComments.vb'
       - 'RdlcVBCode_Usage'
       - 'Readme.md'
+  workflow_dispatch:  # Allow manual trigger
 
 jobs:
   sync:

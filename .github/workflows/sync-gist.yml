@@ -18,34 +18,49 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Update Gist - RdlcReportCode.vb
-        uses: exuanbo/actions-deploy-gist@v1
-        with:
-          token: ${{ secrets.GIST_TOKEN }}
-          gist_id: f8962078e18b40b958410cfb48db145b
-          file_path: RdlcReportCode.vb
-          file_type: text
-
-      - name: Update Gist - RdlcReportCode_WithComments.vb
-        uses: exuanbo/actions-deploy-gist@v1
-        with:
-          token: ${{ secrets.GIST_TOKEN }}
-          gist_id: f8962078e18b40b958410cfb48db145b
-          file_path: RdlcReportCode_WithComments.vb
-          file_type: text
-
-      - name: Update Gist - RdlcVBCode_Usage
-        uses: exuanbo/actions-deploy-gist@v1
-        with:
-          token: ${{ secrets.GIST_TOKEN }}
-          gist_id: f8962078e18b40b958410cfb48db145b
-          file_path: RdlcVBCode_Usage
-          file_type: text
-
-      - name: Update Gist - Readme.md
-        uses: exuanbo/actions-deploy-gist@v1
-        with:
-          token: ${{ secrets.GIST_TOKEN }}
-          gist_id: f8962078e18b40b958410cfb48db145b
-          file_path: Readme.md
-          file_type: text
+      - name: Update Gist via GitHub API
+        env:
+          GIST_TOKEN: ${{ secrets.GIST_TOKEN }}
+          GIST_ID: f8962078e18b40b958410cfb48db145b
+        run: |
+          # Read file contents and escape for JSON
+          escape_json() {
+            python3 -c "import json, sys; print(json.dumps(sys.stdin.read()))"
+          }
+          
+          # Read all files
+          RDLC_CODE=$(cat RdlcReportCode.vb | escape_json)
+          RDLC_COMMENTS=$(cat RdlcReportCode_WithComments.vb | escape_json)
+          RDLC_USAGE=$(cat RdlcVBCode_Usage | escape_json)
+          README=$(cat Readme.md | escape_json)
+          
+          # Create JSON payload
+          PAYLOAD=$(cat <<EOF
+          {
+            "files": {
+              "RdlcReportCode.vb": {
+                "content": $RDLC_CODE
+              },
+              "RdlcReportCode_WithComments.vb": {
+                "content": $RDLC_COMMENTS
+              },
+              "RdlcVBCode_Usage": {
+                "content": $RDLC_USAGE
+              },
+              "Readme.md": {
+                "content": $README
+              }
+            }
+          }
+          EOF
+          )
+          
+          # Update Gist using GitHub API
+          curl -X PATCH \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GIST_TOKEN" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            https://api.github.com/gists/$GIST_ID \
+            -d "$PAYLOAD"
+          
+          echo "✅ Gist updated successfully!"

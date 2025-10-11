@@ -1,0 +1,50 @@
+name: Sync to Gist
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'RdlcReportCode.vb'
+      - 'RdlcReportCode_WithComments.vb'
+      - 'RdlcVBCode_Usage'
+      - 'Readme.md'
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Update Gist - RdlcReportCode.vb
+        uses: exuanbo/actions-deploy-gist@v1
+        with:
+          token: ${{ secrets.GIST_TOKEN }}
+          gist_id: f8962078e18b40b958410cfb48db145b
+          file_path: RdlcReportCode.vb
+          file_type: text
+
+      - name: Update Gist - RdlcReportCode_WithComments.vb
+        uses: exuanbo/actions-deploy-gist@v1
+        with:
+          token: ${{ secrets.GIST_TOKEN }}
+          gist_id: f8962078e18b40b958410cfb48db145b
+          file_path: RdlcReportCode_WithComments.vb
+          file_type: text
+
+      - name: Update Gist - RdlcVBCode_Usage
+        uses: exuanbo/actions-deploy-gist@v1
+        with:
+          token: ${{ secrets.GIST_TOKEN }}
+          gist_id: f8962078e18b40b958410cfb48db145b
+          file_path: RdlcVBCode_Usage
+          file_type: text
+
+      - name: Update Gist - Readme.md
+        uses: exuanbo/actions-deploy-gist@v1
+        with:
+          token: ${{ secrets.GIST_TOKEN }}
+          gist_id: f8962078e18b40b958410cfb48db145b
+          file_path: Readme.md
+          file_type: text

@@ -11,14 +11,12 @@
 ' - Improved null handling and validation
 ' - Eliminated redundant type conversions
 ' - Better code organization and maintainability
+' 
+' RDLC COMPATIBILITY NOTES:
+' - Constants with function calls (Chr, etc.) not supported in RDLC
+' - Using inline values instead: Chr(177), "C:\Temp", "CliReportDebug"
+' - Type conversions explicit to avoid narrowing conversion errors
 ' ==========================================
-
-' =================
-' Constants
-' =================
-Private Const DELIMITER_CHAR As Char = Chr(177)
-Private Const DEFAULT_LOG_PATH As String = "C:\Temp"
-Private Const DEFAULT_LOG_NAME As String = "CliReportDebug"
 
 ' =================
 ' Global variables
@@ -81,7 +79,7 @@ Private Sub InitializeLogPath(ByVal filePath As String, ByVal fileName As String
         
         ' Set default filename if not provided
         If String.IsNullOrEmpty(fileName) Then
-            fileName = DEFAULT_LOG_NAME & "_" & currentDate
+            fileName = "CliReportDebug" & "_" & currentDate
         Else
             fileName = fileName & "_" & currentDate
         End If
@@ -103,7 +101,7 @@ Private Sub InitializeLogPath(ByVal filePath As String, ByVal fileName As String
 End Sub
 
 ' Optimized unified logging with smart caching
-Private Sub WriteLog(ByVal message As String, Optional ByVal filePath As String = DEFAULT_LOG_PATH, Optional ByVal fileName As String = "")
+Private Sub WriteLog(ByVal message As String, Optional ByVal filePath As String = "C:\Temp", Optional ByVal fileName As String = "")
     Try
         Dim fullPath As String = ""
         InitializeLogPath(filePath, fileName, fullPath)
@@ -114,7 +112,7 @@ Private Sub WriteLog(ByVal message As String, Optional ByVal filePath As String 
 End Sub
 
 ' Legacy alias for backward compatibility
-Private Sub WriteLogCached(ByVal message As String, Optional ByVal filePath As String = DEFAULT_LOG_PATH, Optional ByVal fileName As String = "")
+Private Sub WriteLogCached(ByVal message As String, Optional ByVal filePath As String = "C:\Temp", Optional ByVal fileName As String = "")
     WriteLog(message, filePath, fileName)
 End Sub
 
@@ -129,8 +127,8 @@ End Function
 Public Function GetVal2(ByRef Data As Object, Key As Object) As Object
     ' Handle numeric key
     If IsNumeric(Key) Then
-        Dim i As Long
-        If Not Integer.TryParse(Key, i) OrElse i = 0 Then
+        Dim i As Integer
+        If Not Integer.TryParse(CStr(Key), i) OrElse i = 0 Then
             Return "Index starts at 1"
         End If
         
@@ -179,7 +177,7 @@ Public Function SetDataAsKeyValueList(ByRef SharedData As Object, NewData As Obj
     End If
     
     Dim dataStr As String = CStr(NewData)
-    Dim words As String() = dataStr.Split(DELIMITER_CHAR)
+    Dim words As String() = dataStr.Split(Chr(177))
     Dim i As Integer
     
     ' Process pairs efficiently with Step 2
@@ -250,15 +248,15 @@ Public Function GetData(Num As Integer, Group As Integer) As Object
     ' Object - return value  
 
     If Group = 1 Then
-        Return CStr(Choose(Num, Split(CStr(Data1), DELIMITER_CHAR)))
+        Return CStr(Choose(Num, Split(CStr(Data1), Chr(177))))
     End If
 
     If Group = 2 Then
-        Return CStr(Choose(Num, Split(CStr(Data2), DELIMITER_CHAR)))
+        Return CStr(Choose(Num, Split(CStr(Data2), Chr(177))))
     End If
 
     If Group = 3 Then
-        Return CStr(Choose(Num, Split(CStr(Data3), DELIMITER_CHAR)))
+        Return CStr(Choose(Num, Split(CStr(Data3), Chr(177))))
     End If
     
     Return Nothing

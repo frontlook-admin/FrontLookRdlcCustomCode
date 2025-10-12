@@ -15,28 +15,13 @@ Imports System.Text
 ''' - Improved null handling and validation
 ''' - Eliminated redundant type conversions
 ''' - Better code organization and maintainability
+'''
+''' RDLC COMPATIBILITY NOTES:
+''' - Constants with function calls (Chr, etc.) not supported in RDLC
+''' - Using inline values instead: Chr(177), "C:\Temp", "CliReportDebug"
+''' - Type conversions explicit to avoid narrowing conversion errors
 ''' </summary>
 Public Class StringAndNumberUtils
-
-    ' =================
-    ' Constants
-    ' =================
-    
-    ''' <summary>
-    ''' Delimiter character used to separate key-value pairs in data strings.
-    ''' Character 177 (±) is used as it rarely appears in normal text.
-    ''' </summary>
-    Private Const DELIMITER_CHAR As Char = Chr(177)
-    
-    ''' <summary>
-    ''' Default path where log files are stored.
-    ''' </summary>
-    Private Const DEFAULT_LOG_PATH As String = "C:\Temp"
-    
-    ''' <summary>
-    ''' Default base name for log files (date will be appended).
-    ''' </summary>
-    Private Const DEFAULT_LOG_NAME As String = "CliReportDebug"
 
     ' =================
     ' Global variables
@@ -163,7 +148,7 @@ Public Class StringAndNumberUtils
             
             ' Set default filename if not provided
             If String.IsNullOrEmpty(fileName) Then
-                fileName = DEFAULT_LOG_NAME & "_" & currentDate
+                fileName = "CliReportDebug" & "_" & currentDate
             Else
                 fileName = fileName & "_" & currentDate
             End If
@@ -213,7 +198,7 @@ Public Class StringAndNumberUtils
     ''' ' Custom filepath and filename - logs to D:\Logs\MyReport_20251011.log
     ''' =Code.WriteLog("Custom file message", "D:\Logs", "MyReport")
     ''' </example>
-    Private Sub WriteLog(ByVal message As String, Optional ByVal filePath As String = DEFAULT_LOG_PATH, Optional ByVal fileName As String = "")
+    Private Sub WriteLog(ByVal message As String, Optional ByVal filePath As String = "C:\Temp", Optional ByVal fileName As String = "")
         Try
             Dim fullPath As String = ""
             InitializeLogPath(filePath, fileName, fullPath)
@@ -234,7 +219,7 @@ Public Class StringAndNumberUtils
     ''' benefit from the optimized implementation without any code changes.
     ''' Both WriteLog and WriteLogCached now use the same optimized caching logic.
     ''' </remarks>
-    Private Sub WriteLogCached(ByVal message As String, Optional ByVal filePath As String = DEFAULT_LOG_PATH, Optional ByVal fileName As String = "")
+    Private Sub WriteLogCached(ByVal message As String, Optional ByVal filePath As String = "C:\Temp", Optional ByVal fileName As String = "")
         WriteLog(message, filePath, fileName)
     End Sub
 
@@ -284,8 +269,8 @@ Public Class StringAndNumberUtils
     Public Function GetVal2(ByRef Data As Object, Key As Object) As Object
         ' Handle numeric key (index-based access)
         If IsNumeric(Key) Then
-            Dim i As Long
-            If Not Integer.TryParse(Key, i) OrElse i = 0 Then
+            Dim i As Integer
+            If Not Integer.TryParse(CStr(Key), i) OrElse i = 0 Then
                 Return "Index starts at 1"
             End If
             
@@ -382,7 +367,7 @@ Public Class StringAndNumberUtils
         End If
         
         Dim dataStr As String = CStr(NewData)
-        Dim words As String() = dataStr.Split(DELIMITER_CHAR)
+        Dim words As String() = dataStr.Split(Chr(177))
         Dim i As Integer
         
         ' Process pairs efficiently with Step 2 (50% fewer iterations)
@@ -515,15 +500,15 @@ Public Class StringAndNumberUtils
         ' Object - return value  
 
         If Group = 1 Then
-            Return CStr(Choose(Num, Split(CStr(Data1), DELIMITER_CHAR)))
+            Return CStr(Choose(Num, Split(CStr(Data1), Chr(177))))
         End If
 
         If Group = 2 Then
-            Return CStr(Choose(Num, Split(CStr(Data2), DELIMITER_CHAR)))
+            Return CStr(Choose(Num, Split(CStr(Data2), Chr(177))))
         End If
 
         If Group = 3 Then
-            Return CStr(Choose(Num, Split(CStr(Data3), DELIMITER_CHAR)))
+            Return CStr(Choose(Num, Split(CStr(Data3), Chr(177))))
         End If
         
         Return Nothing

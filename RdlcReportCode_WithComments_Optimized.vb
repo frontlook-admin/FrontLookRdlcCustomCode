@@ -545,6 +545,9 @@ Public Class StringAndNumberUtils
     ''' ' Input: {"Hello", "", "World", "Test"}
     ''' ' Output: "Hello\r\nWorld\r\nTest"
     ''' </example>
+    ''' <remarks>
+    ''' Trims leading and trailing whitespace from all strings before concatenation.
+    ''' </remarks>
     Public Function ConcatenateNonEmptyWithCrLf(ByVal strings As String()) As String
         If strings Is Nothing OrElse strings.Length = 0 Then
             Return String.Empty
@@ -555,15 +558,18 @@ Public Class StringAndNumberUtils
         
         For Each str As String In strings
             If Not String.IsNullOrEmpty(str) Then
-                If Not first Then
-                    sb.Append(vbCrLf)
+                Dim trimmed As String = str.Trim()
+                If Not String.IsNullOrEmpty(trimmed) Then
+                    If Not first Then
+                        sb.Append(vbCrLf)
+                    End If
+                    sb.Append(trimmed)
+                    first = False
                 End If
-                sb.Append(str)
-                first = False
             End If
         Next
         
-        Return sb.ToString()
+        Return sb.ToString().Trim()
     End Function
 
     ''' <summary>
@@ -576,6 +582,7 @@ Public Class StringAndNumberUtils
     ''' <remarks>
     ''' OPTIMIZATION: Same StringBuilder optimization as ConcatenateNonEmptyWithCrLf.
     ''' Empty strings are excluded from the result.
+    ''' Trims leading and trailing whitespace from all strings before concatenation.
     ''' </remarks>
     ''' <example>
     ''' ConcatenateNonEmptyWithDelimiter({"Hello", "", "World"}, ",") returns "Hello,World"
@@ -596,15 +603,18 @@ Public Class StringAndNumberUtils
         
         For Each str As String In strings
             If Not String.IsNullOrEmpty(str) Then
-                If Not first Then
-                    sb.Append(delimiter)
+                Dim trimmed As String = str.Trim()
+                If Not String.IsNullOrEmpty(trimmed) Then
+                    If Not first Then
+                        sb.Append(delimiter)
+                    End If
+                    sb.Append(trimmed)
+                    first = False
                 End If
-                sb.Append(str)
-                first = False
             End If
         Next
         
-        Return sb.ToString()
+        Return sb.ToString().Trim()
     End Function
 
     ''' <summary>

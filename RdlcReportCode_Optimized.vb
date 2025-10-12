@@ -276,15 +276,18 @@ Public Function ConcatenateNonEmptyWithCrLf(ByVal strings As String()) As String
     
     For Each str As String In strings
         If Not String.IsNullOrEmpty(str) Then
-            If Not first Then
-                sb.Append(vbCrLf)
+            Dim trimmed As String = str.Trim()
+            If Not String.IsNullOrEmpty(trimmed) Then
+                If Not first Then
+                    sb.Append(vbCrLf)
+                End If
+                sb.Append(trimmed)
+                first = False
             End If
-            sb.Append(str)
-            first = False
         End If
     Next
     
-    Return sb.ToString()
+    Return sb.ToString().Trim()
 End Function
 
 Public Function ConcatenateNonEmptyWithDelimiter(ByVal strings As String(), ByVal delimiter As String) As String
@@ -297,15 +300,18 @@ Public Function ConcatenateNonEmptyWithDelimiter(ByVal strings As String(), ByVa
     
     For Each str As String In strings
         If Not String.IsNullOrEmpty(str) Then
-            If Not first Then
-                sb.Append(delimiter)
+            Dim trimmed As String = str.Trim()
+            If Not String.IsNullOrEmpty(trimmed) Then
+                If Not first Then
+                    sb.Append(delimiter)
+                End If
+                sb.Append(trimmed)
+                first = False
             End If
-            sb.Append(str)
-            first = False
         End If
     Next
     
-    Return sb.ToString()
+    Return sb.ToString().Trim()
 End Function
 
 ' Legacy alias - now uses the optimized delimiter function

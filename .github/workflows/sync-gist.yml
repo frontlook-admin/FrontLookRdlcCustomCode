@@ -10,7 +10,6 @@ on:
       - 'RdlcVBCode_Usage_Optimized'
       - 'Readme_Optimized.md'
       - 'FL_NumberToStrings.js'
-      - 'GIST_EXPORT.md'
   workflow_dispatch:  # Allow manual trigger
 
 jobs:
@@ -42,13 +41,13 @@ jobs:
           {
             "description": "RDLC Report Custom Code - Optimized (40-60% faster) + JavaScript Implementation",
             "files": {
-              "RdlcReportCode_Optimized.vb": {
+              "RdlcReportCode.vb": {
                 "content": $RDLC_CODE
               },
-              "RdlcReportCode_WithComments_Optimized.vb": {
+              "RdlcReportCode_WithComments.vb": {
                 "content": $RDLC_COMMENTS
               },
-              "RdlcVBCode_Usage_Optimized": {
+              "RdlcVBCode_Usage": {
                 "content": $RDLC_USAGE
               },
               "FL_NumberToStrings.js": {
@@ -72,8 +71,8 @@ jobs:
           
           echo "✅ Gist updated successfully!"
           echo "📦 Files synced:"
-          echo "  - RdlcReportCode_Optimized.vb"
-          echo "  - RdlcReportCode_WithComments_Optimized.vb"
-          echo "  - RdlcVBCode_Usage_Optimized"
+          echo "  - RdlcReportCode.vb"
+          echo "  - RdlcReportCode_WithComments.vb"
+          echo "  - RdlcVBCode_Usage"
           echo "  - FL_NumberToStrings.js"
           echo "  - Readme.md"

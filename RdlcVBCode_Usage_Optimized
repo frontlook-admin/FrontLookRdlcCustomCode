@@ -2,11 +2,16 @@
 
 /**Cache Management**/
 
-' Clear all caches to free memory (call between report runs)
+' Clear all caches to free memory (call between report runs if memory is a concern)
 Code.ClearCaches()
 
-//In Rdlc Report - Hidden textbox at start of report
+//In RDLC Report - Hidden textbox at start of major report section
 = Code.ClearCaches()
+
+' WHEN TO USE:
+' - Between processing large datasets (thousands of rows)
+' - When switching between report sections with different data
+' - Not usually needed for typical reports (caches are efficient)
 
 /**Cache Management**/
 
@@ -23,12 +28,19 @@ Code.WriteLog("Custom path message", "D:\Logs")
 ' Custom filepath and filename - logs to D:\Logs\MyReport_20251011.log
 Code.WriteLog("Custom file message", "D:\Logs", "MyReport")
 
-//In Rdlc Report
+//In RDLC Report - Basic logging
 = Code.WriteLog("Report generated successfully")
 = Code.WriteLog("Processing GL: " & Fields!GLId.Value, "C:\Logs", "GeneralLedger")
 
-' OPTIMIZATION NOTE: Path caching reduces 100 log writes from ~500ms to ~100ms
-' Automatically handles date changes and parameter changes
+//In RDLC Report - Debugging with context
+= Code.WriteLog("Row " & RowNumber(Nothing) & ": " & Fields!ItemNo.Value & " - Qty: " & Fields!Quantity.Value)
+= Code.WriteLog("Page " & Globals!PageNumber & " - Total: " & Sum(Fields!Amount.Value), "C:\Reports", "Sales")
+
+' OPTIMIZATION NOTE: 
+' - Path caching reduces 100 log writes from ~500ms to ~100ms
+' - Automatically handles date changes and parameter changes
+' - Directory created only once per report execution
+' - Use freely without performance concerns
 
 /**Logging - Optimized**/
 
@@ -43,9 +55,11 @@ Code.WriteLogCached("Processing item 1")
 Code.WriteLogCached("Processing item 2")
 Code.WriteLogCached("Report completed")
 
-//In Rdlc Report
+//In RDLC Report
 = Code.WriteLogCached("Processing: " & Fields!CustomerName.Value)
 = Code.WriteLogCached("Total Amount: " & Fields!Amount.Value, "C:\ReportLogs", "SalesReport")
+
+' MIGRATION NOTE: No changes needed when upgrading to optimized version
 
 /**Logging - WriteLogCached**/
 
@@ -53,62 +67,102 @@ Code.WriteLogCached("Report completed")
 /**Global Data Management - SetGlobalData**/
 
 ' In C/AL or AL - Create key-value list with Chr(177) separator
+local procedure AddKeyValue(VAR KeyValueListAsText: Text; _Key: Text; _Value: Text)
+var
+    Chr177: Text[1];
+    NewPair: Text;
+begin
+    Chr177[1] := 177;
+    NewPair := _Key + Chr177 + _Value + Chr177;
+    KeyValueListAsText += NewPair;
+end;
+
 local procedure GetGlobalDataFields() KeyValueList : Text
 begin
     AddKeyValue(KeyValueList, 'CompanyName', CompanyInfo.Name);
     AddKeyValue(KeyValueList, 'CompanyAddress', CompanyInfo.Address);
-    AddKeyValue(KeyValueList, 'ReportDate', Format(Today));
+    AddKeyValue(KeyValueList, 'CompanyPhone', CompanyInfo."Phone No.");
+    AddKeyValue(KeyValueList, 'CompanyEmail', CompanyInfo."E-Mail");
+    AddKeyValue(KeyValueList, 'ReportDate', Format(Today, 0, '<Day,2>/<Month,2>/<Year4>'));
     AddKeyValue(KeyValueList, 'ReportTitle', 'Sales Invoice');
+    AddKeyValue(KeyValueList, 'UserName', UserId);
 end;
 
 ' Add to dataset column
 column(GlobalData; GetGlobalDataFields())
 
-//In Rdlc Report - Hidden Tablix Cell
+//In RDLC Report - Hidden Tablix Cell (must be in Body section, not Header/Footer)
 = Code.SetGlobalData(Fields!GlobalData.Value)
 
-' OPTIMIZATION NOTE: SetDataAsKeyValueList now uses O(n) algorithm (50% faster)
-' Single Split() operation instead of splitting on every iteration
+' OPTIMIZATION NOTE: 
+' - SetDataAsKeyValueList now uses O(n) algorithm (50% faster)
+' - Single Split() operation instead of splitting on every iteration
+' - Handles 50+ key-value pairs efficiently
+
+' RENDERING ORDER:
+' 1. Body renders first (SetGlobalData is called here)
+' 2. Header/Footer render after (can now access values via GetVal)
 
 /**Global Data Management - SetGlobalData**/
 
 
 /**Global Data Management - GetVal (Case-insensitive)**/
 
-//In Rdlc Report - Get data by name (case-insensitive)
+//In RDLC Report - Header section (Get data by name, case-insensitive)
 = Code.GetVal("CompanyName")'
+= Code.GetVal("companyname")'      ' Same result (case-insensitive)
+= Code.GetVal("COMPANYNAME")'      ' Same result (case-insensitive)
 = Code.GetVal("CompanyAddress")'
+= Code.GetVal("CompanyPhone")'
+= Code.GetVal("CompanyEmail")'
+
+//In RDLC Report - Footer section
 = Code.GetVal("ReportDate")'
 = Code.GetVal("ReportTitle")'
+= Code.GetVal("UserName")'
 
-//Get by numeric index (1-based)
-= Code.GetVal(1)'
-= Code.GetVal(2)'
+//Get by numeric index (1-based) - not recommended but supported
+= Code.GetVal(1)'    ' Gets first value
+= Code.GetVal(2)'    ' Gets second value
 
-' Note: End with apostrophe (') to preserve arguments when copy/pasting
+' IMPORTANT: Always end with apostrophe (') to preserve arguments when copy/pasting textboxes!
+' Without apostrophe: =Code.GetVal("CompanyName")  <- arguments lost on copy/paste
+' With apostrophe:    =Code.GetVal("CompanyName")' <- arguments preserved
 
-' OPTIMIZATION NOTE: GetVal2 now has improved validation logic
-' Early returns and better null handling (30% faster)
+' OPTIMIZATION NOTE: 
+' - GetVal2 now has improved validation logic
+' - Early returns and better null handling (30% faster error detection)
+' - Clearer error messages: "?KeyName?", "CollectionEmpty", "Index starts at 1"
+
+' ERROR HANDLING:
+' - Returns "?CompanyName?" if key not found
+' - Returns "CollectionEmpty" if SetGlobalData not called yet
+' - Returns "Invalid Index: '5'! Collection Count = 3" if index out of range
 
 /**Global Data Management - GetVal**/
 
 
 /**NAV Way - SetData (Legacy)**/
 
-//In Rdlc Report - Hidden Tablix Cell (using numbered groups)
+'In RDLC Report - Hidden Tablix Cell (using numbered groups)
 =Code.SetData(Fields!GlobalData.Value, 1)
 =Code.SetData(Fields!HeaderData.Value, 2)
 =Code.SetData(Fields!FooterData.Value, 3)
 
-' NOTE: Consider using SetGlobalData/GetVal instead for better readability
-' Named keys are easier to maintain than position numbers
+' DRAWBACKS of this approach:
+' 1. Limited to 3 separate data groups
+' 2. Position-based access (must count items manually)
+' 3. Not self-documenting (what is item 5?)
+' 4. Difficult to maintain when data structure changes
+
+' RECOMMENDATION: Use SetGlobalData/GetVal instead for better readability
 
 /**NAV Way - SetData**/
 
 
 /**NAV Way - GetData (Legacy)**/
 
-//In Rdlc Report - Get data by position number and group
+'In RDLC Report - Get data by position number and group
 =Code.GetData(1, 1)  ' First value from Data1
 =Code.GetData(2, 1)  ' Second value from Data1
 =Code.GetData(3, 1)  ' Third value from Data1
@@ -116,9 +170,17 @@ column(GlobalData; GetGlobalDataFields())
 =Code.GetData(1, 2)  ' First value from Data2
 =Code.GetData(2, 2)  ' Second value from Data2
 
+=Code.GetData(1, 3)  ' First value from Data3
+
+' PROBLEM EXAMPLE:
+' Company Name is at position 5 in Data1
+' =Code.GetData(5, 1)  <- What is position 5? Must count manually!
+
+' BETTER ALTERNATIVE:
+' =Code.GetVal("CompanyName")' <- Self-documenting and maintainable
+
 ' NOTE: Position-based access requires counting items in the list
 ' Consider using Code.GetVal("KeyName") instead for better readability
-' Example: Code.GetVal("CompanyName")' is clearer than Code.GetData(5, 1)
 
 /**NAV Way - GetData**/
 
@@ -128,8 +190,9 @@ column(GlobalData; GetGlobalDataFields())
 ' ConcatenateNonEmptyWithCrLf - Now 75% faster with StringBuilder
 Dim result As String = ConcatenateNonEmptyWithCrLf(New String() {"Hello", "", "World", "This", "Is", "", "VB.NET"})
 Console.WriteLine(result)
+' Output: "Hello\r\nWorld\r\nThis\r\nIs\r\nVB.NET"
 
-//In Rdlc Report
+//In RDLC Report - Concatenate GL info with narration
 = Code.ConcatenateNonEmptyWithCrLf(
 New String() {
     (Lookup(Fields!GLId.Value, Fields!GlId.Value, Fields!GlName.Value, "MGeneralLedgers")),
@@ -137,24 +200,48 @@ New String() {
     (IIf(Trim(Fields!Narration.Value) = "", "", Fields!Narration.Value)),
     (IIf(RowNumber(Nothing) > 1 Or Trim(Fields!MainNarration.Value) = "", "", Fields!MainNarration.Value))})
 
-' OPTIMIZATION: StringBuilder prevents O(n²) memory allocation
-' For 50 strings x 10 iterations: 30ms vs 120ms in original version
+//In RDLC Report - Build complete address block
+= Code.ConcatenateNonEmptyWithCrLf(
+New String() {
+    Fields!CustomerName.Value,
+    Fields!Address1.Value,
+    Fields!Address2.Value,
+    Fields!City.Value & " " & Fields!PostalCode.Value,
+    Fields!State.Value,
+    Fields!Country.Value
+})
+
+' OPTIMIZATION: 
+' - StringBuilder prevents O(n²) memory allocation
+' - For 50 strings x 10 iterations: 30ms vs 120ms in original version
+' - Empty strings automatically filtered out
+' - Trimmed whitespace before concatenation
 
 /**String Concatenation - ConcatenateNonEmptyWithCrLf**/
 
 
 /**String Concatenation - With Custom Delimiter (Optimized)**/
 
-Dim result As String = ConcatenateNonEmptyWithDelimiter(New String() {"Hello", "", "World", "This", "Is", "", "VB.NET"},",")
+Dim result As String = ConcatenateNonEmptyWithDelimiter(New String() {"Hello", "", "World", "This", "Is", "", "VB.NET"},", ")
 Console.WriteLine(result)
+' Output: "Hello, World, This, Is, VB.NET"
 
-//In Rdlc Report
+//In RDLC Report - Comma-separated list
 = Code.ConcatenateNonEmptyWithDelimiter(
 New String() {
     (Lookup(Fields!GLId.Value, Fields!GlId.Value, Fields!GlName.Value, "MGeneralLedgers")),
     (IIf(RowNumber(Nothing) > 1 Or Trim(Fields!PayeeNote.Value) = "", "", Fields!PayeeNote.Value)), 
     (IIf(Trim(Fields!Narration.Value) = "", "", Fields!Narration.Value)),
-    (IIf(RowNumber(Nothing) > 1 Or Trim(Fields!MainNarration.Value) = "", "", Fields!MainNarration.Value))},",")
+    (IIf(RowNumber(Nothing) > 1 Or Trim(Fields!MainNarration.Value) = "", "", Fields!MainNarration.Value))},", ")
+
+//In RDLC Report - Single line address
+= Code.ConcatenateNonEmptyWithDelimiter(
+New String() {
+    Fields!Address1.Value,
+    Fields!City.Value,
+    Fields!State.Value,
+    Fields!PostalCode.Value
+}, ", ")
 
 ' OPTIMIZATION: Same StringBuilder benefits as ConcatenateNonEmptyWithCrLf
 
@@ -168,7 +255,7 @@ New String() {
 Dim result As String = ConcatenateNonEmptyWithCrLfAndDelimiter(New String() {"Hello", "", "World"},",")
 Console.WriteLine(result)
 
-//In Rdlc Report
+//In RDLC Report
 = Code.ConcatenateNonEmptyWithCrLfAndDelimiter(
 New String() {
     Fields!Address1.Value,
@@ -176,101 +263,14 @@ New String() {
     Fields!City.Value
 },", ")
 
+' MIGRATION NOTE: No changes needed - automatically optimized
+
 /**String Concatenation - ConcatenateNonEmptyWithCrLfAndDelimiter**/
 
 
-/**Number To Words - Optimized with Caching (80% faster for repeated values)**/
+/**Number To Words - Optimized with Caching (95% faster for repeated values)**/
 
-//In VB.NET
-Dim result As String = ToWordsIn(55225)
-Console.WriteLine(result)
-
-//In Rdlc Report - Basic conversion
-= Code.ToWordsIn(55225)
-
-' Full currency format with denomination
-= Code.ToWordsIn(Fields!Amount.Value, True, True)'
-
-' Currency without denomination prefix
-= Code.ToWordsIn(Fields!Amount.Value, True, False)'
-
-' Non-currency format (with "Point" for decimals)
-= Code.ToWordsIn(Fields!Quantity.Value, False)'
-
-' OPTIMIZATION: Results are cached for numbers < 10000
-' Perfect for reports with repeated values (unit prices, tax rates)
-' Example: Converting "1000" 100 times:
-'   Without cache: 1554ms
-'   With cache: 79ms (94.9% faster!)
-
-/**Number To Words - Basic**/
-
-
-/**Number To Words - Currency Examples (Optimized)**/
-
-' Example 1: Full format with "Rupees" and "Paise"
-= Code.ToWordsIn(1234.56, True, True)'
-' Result: "Rupees One Thousand Two Hundred Thirty-Four And Fifty-Six Paise Only"
-
-' Example 2: Without currency prefix
-= Code.ToWordsIn(1234.56, True, False)'
-' Result: "One Thousand Two Hundred Thirty-Four And Fifty-Six Paise Only"
-
-' Example 3: Non-currency (decimal as "Point")
-= Code.ToWordsIn(1234.56, False)'
-' Result: "One Thousand Two Hundred and Thirty-Four Point Five Six"
-
-/**Number To Words - Currency Examples**/
-
-
-/**Number To Words - Minimized Format**/
-
-//In VB.NET
-Dim result As String = FL_NumberToWordsMinimised(150000)
-Console.WriteLine(result)  ' Output: "1.5 Lakh"
-
-//In Rdlc Report - Compact representation
-= Code.FL_NumberToWordsMinimised(Fields!TotalSales.Value)
-
-' Examples:
-' 150000 → "1.5 Lakh"
-' 5000000 → "50 Lakh"
-' 12500000 → "1.3 Crore"
-
-/**Number To Words - Minimized**/
-
-
-/**Performance Comparison - Optimization Benefits**/
-
-' LOGGING (100 calls):
-'   Original: ~500ms (directory check every call)
-'   Optimized: ~100ms (cached path)
-'   Improvement: 80% faster
-
-' STRING CONCATENATION (50 strings x 10 iterations):
-'   Original: ~120ms (string concatenation creates intermediate objects)
-'   Optimized: ~30ms (StringBuilder modifies buffer)
-'   Improvement: 75% faster
-
-' KEY-VALUE PARSING (50 pairs x 20 iterations):
-'   Original: ~28ms (Split on every iteration = O(n²))
-'   Optimized: ~14ms (Split once, iterate with Step 2 = O(n))
-'   Improvement: 50% faster
-
-' NUMBER TO WORDS (100 conversions of same value):
-'   Original: ~1554ms (calculates every time)
-'   Optimized: ~79ms (cache hit after first calculation)
-'   Improvement: 94.9% faster for cached values
-
-/**Performance Comparison**/
-
-
-/**Best Practices - Using Optimized Code**/
-
-' 1. CACHING: ClearCaches() between major report sections if memory is a concern
-'    =Code.ClearCaches()
-
-' 2. LOGGING: Use WriteLog freely - caching makes it efficient
+'
 '    =Code.WriteLog("Detail: " & Fields!ItemNo.Value)
 
 ' 3. STRING CONCATENATION: StringBuilder optimization handles large arrays efficiently

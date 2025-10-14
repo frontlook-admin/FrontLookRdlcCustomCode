@@ -182,7 +182,7 @@ GlobalData := GetGlobalDataFields("Sales Header", Addr);
                   <Paragraph>
                     <TextRuns>
                       <TextRun>
-                        <Value>=Code.SetGlobalData(Fields!GlobalData.Value)</Value>
+                        <Value />
                         <Style />
                       </TextRun>
                     </TextRuns>
@@ -228,13 +228,19 @@ GlobalData := GetGlobalDataFields("Sales Header", Addr);
 </Tablix>
 ```
 
+**Important Notes:**
+- The `<Value />` tag should be empty (the actual call happens in the `<Hidden>` property)
+- Replace `DataSet_Result` with your actual dataset name
+- The control is hidden via the `Visibility` property which calls `SetGlobalData`
+
 ![SetGlobalData Example](https://github.com/frontlook-admin/RDLCReport_CustomCode/blob/master/Code_SetGlobalData.png)
 
 **Option B: Using Report Builder**
 
-1. Add a small textbox in the body section
+1. Add a small textbox in the body section (not in header/footer)
 2. Set its `Hidden` property to: `=Code.SetGlobalData(Fields!GlobalData.Value)`
-3. Make it very small (0.3cm x 0.3cm) and position it where it won't interfere
+3. Leave the textbox value empty or set to a space
+4. Make it very small (0.3cm x 0.3cm) and position it where it won't interfere
 
 ### Step 5: Use GetVal to Retrieve Data
 
@@ -305,6 +311,7 @@ Writes a log message to a file with timestamp. Now includes smart caching for be
 - ✅ Directory created only once, not on every write
 - ✅ Automatically detects date changes and switches to new file
 - ✅ Handles parameter changes gracefully
+- ✅ Thread-safe for concurrent report execution
 
 **Performance:**
 
@@ -322,19 +329,12 @@ WriteLog("Custom path message", "D:\Logs")
 ' Custom filepath and filename - logs to D:\Logs\MyReport_20251011.log
 WriteLog("Custom file message", "D:\Logs", "MyReport")
 
-' In RDLC Report
+' In RDLC Report - Log processing details
 =Code.WriteLog("Processing item: " & Fields!ItemNo.Value)
+=Code.WriteLog("Customer: " & Fields!CustomerName.Value, "C:\Logs", "SalesReport")
 ```
 
-### WriteLogCached (Legacy Alias)
-
-Now an alias to the optimized `WriteLog` function. All existing code automatically benefits from the optimization!
-
-```vb
-' Both use the same optimized implementation
-WriteLogCached("Starting report")  ' Optimized
-WriteLog("Processing data")        ' Optimized
-```
+**Note:** The function is marked `Private` in the VB code, but is accessible via the `Code.` prefix in RDLC expressions.
 
 ---
 

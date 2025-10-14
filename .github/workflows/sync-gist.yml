@@ -9,6 +9,8 @@ on:
       - 'RdlcReportCode_WithComments_Optimized.vb'
       - 'RdlcVBCode_Usage_Optimized'
       - 'Readme_Optimized.md'
+      - 'FL_NumberToStrings.js'
+      - 'GIST_EXPORT.md'
   workflow_dispatch:  # Allow manual trigger
 
 jobs:
@@ -28,29 +30,33 @@ jobs:
             python3 -c "import json, sys; print(json.dumps(sys.stdin.read()))"
           }
           
-          # Read optimized files only
+          # Read optimized files
           RDLC_CODE=$(cat RdlcReportCode_Optimized.vb | escape_json)
           RDLC_COMMENTS=$(cat RdlcReportCode_WithComments_Optimized.vb | escape_json)
           RDLC_USAGE=$(cat RdlcVBCode_Usage_Optimized | escape_json)
           README=$(cat Readme_Optimized.md | escape_json)
+          JS_MODULE=$(cat FL_NumberToStrings.js | escape_json)
           
           # Create JSON payload
           PAYLOAD=$(cat <<EOF
           {
-            "description": "RDLC Report Custom Code - Optimized Version (40-60% faster)",
+            "description": "RDLC Report Custom Code - Optimized (40-60% faster) + JavaScript Implementation",
             "files": {
-              "RdlcReportCode.vb": {
+              "RdlcReportCode_Optimized.vb": {
                 "content": $RDLC_CODE
               },
-              "RdlcReportCode_WithComments.vb": {
+              "RdlcReportCode_WithComments_Optimized.vb": {
                 "content": $RDLC_COMMENTS
               },
-              "RdlcVBCode_Usage": {
+              "RdlcVBCode_Usage_Optimized": {
                 "content": $RDLC_USAGE
+              },
+              "FL_NumberToStrings.js": {
+                "content": $JS_MODULE
               },
               "Readme.md": {
                 "content": $README
-              }
+              },
             }
           }
           EOF
@@ -65,3 +71,9 @@ jobs:
             -d "$PAYLOAD"
           
           echo "✅ Gist updated successfully!"
+          echo "📦 Files synced:"
+          echo "  - RdlcReportCode_Optimized.vb"
+          echo "  - RdlcReportCode_WithComments_Optimized.vb"
+          echo "  - RdlcVBCode_Usage_Optimized"
+          echo "  - FL_NumberToStrings.js"
+          echo "  - Readme.md"

@@ -324,13 +324,69 @@ Public Function ConcatenateWithCrLf(ByVal strings As String()) As String
 End Function
 
 ' ==========================
-' Number to Words Conversion (OPTIMIZED with Caching)
+' Number to Words Conversion (OPTIMIZED with Caching + 4-element Currency Support)
 ' ==========================
 
-Public currencyDenotionIndian As String() = New String() {"Rupees", "Paise"}
+' Currency array: [Name, Decimal Name, Symbol, Format]
+Public currencyDenotionIndian As String() = New String() {"Rupees", "Paise", "₹", "#,##,##0.00"}
 
+' Format currency with symbol and proper formatting
+Public Function FormatCurrency(number As Double, Optional currencyDenotion As String() = Nothing) As String
+    Dim currency As String() = If(currencyDenotion IsNot Nothing AndAlso currencyDenotion.Length >= 4, currencyDenotion, currencyDenotionIndian)
+    Dim symbol As String = currency(2)
+    Dim format As String = currency(3)
+    
+    ' Apply format
+    Dim formatted As String
+    If format = "#,##,##0.00" Then
+        ' Indian numbering format
+        formatted = FormatIndianNumbering(number)
+    Else
+        ' Default to 2 decimal places
+        formatted = number.ToString("N2", System.Globalization.CultureInfo.InvariantCulture)
+    End If
+    
+    Return symbol & formatted
+End Function
+
+' Format number with Indian numbering system
+Private Function FormatIndianNumbering(number As Double) As String
+    Dim parts As String() = number.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture).Split("."c)
+    Dim intPart As String = parts(0)
+    Dim decPart As String = parts(1)
+    
+    ' Handle negative numbers
+    Dim isNegative As Boolean = intPart.StartsWith("-")
+    Dim absIntPart As String = If(isNegative, intPart.Substring(1), intPart)
+    
+    Dim formatted As String = ""
+    Dim len As Integer = absIntPart.Length
+    
+    If len <= 3 Then
+        formatted = absIntPart
+    Else
+        ' Last 3 digits
+        formatted = absIntPart.Substring(len - 3)
+        Dim remaining As String = absIntPart.Substring(0, len - 3)
+        
+        ' Add groups of 2 digits
+        While remaining.Length > 0
+            If remaining.Length <= 2 Then
+                formatted = remaining & "," & formatted
+                Exit While
+            Else
+                formatted = remaining.Substring(remaining.Length - 2) & "," & formatted
+                remaining = remaining.Substring(0, remaining.Length - 2)
+            End If
+        End While
+    End If
+    
+    Return If(isNegative, "-", "") & formatted & "." & decPart
+End Function
+
+' Convert number to words with currency support
 Public Function ToWordsIn(number As Double, Optional IfCurrency As Boolean = True, Optional ShowCurrency As Boolean = True, Optional CurrencyDenotion As String = "") As String
-    Dim num = number.ToString().Split("."c)
+    Dim num = number.ToString(System.Globalization.CultureInfo.InvariantCulture).Split("."c)
     Dim words1 = ToWordsIn(Long.Parse(num(0)))
 
     Dim word2 As String = String.Empty
@@ -340,9 +396,18 @@ Public Function ToWordsIn(number As Double, Optional IfCurrency As Boolean = Tru
     
     If IfCurrency Then
         If ShowCurrency Then
+            ' Parse currency denotion string or use default array
+            Dim currencyArray As String()
+            If Not String.IsNullOrEmpty(CurrencyDenotion) Then
+                Dim split As String() = CurrencyDenotion.Split(";"c)
+                currencyArray = If(split.Length >= 4, split, currencyDenotionIndian)
+            Else
+                currencyArray = currencyDenotionIndian
+            End If
+            
             Return If(num.Length > 1 AndAlso Long.Parse(num(1)) > 0, _
-                     currencyDenotionIndian(0) & " " & words1.Replace(" and ", " ") & " And " & word2 & " " & currencyDenotionIndian(1) & " Only", _
-                     currencyDenotionIndian(0) & " " & words1 & " Only")
+                     currencyArray(0) & " " & words1.Replace(" and ", " ") & " And " & word2 & " " & currencyArray(1) & " Only", _
+                     currencyArray(0) & " " & words1 & " Only")
         End If
         Return If(num.Length > 1 AndAlso Long.Parse(num(1)) > 0, _
                  words1.Replace(" and ", " ") & " And " & word2 & " " & currencyDenotionIndian(1) & " Only", _

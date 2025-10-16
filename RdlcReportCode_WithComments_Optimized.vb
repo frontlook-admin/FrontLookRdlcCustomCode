@@ -882,4 +882,67 @@ Public Class StringAndNumberUtils
         
         Return words
     End Function
+
+    ' ==========================
+    ' Base64 Conversion Methods
+    ' ==========================
+
+    ''' <summary>
+    ''' Converts a Base64 encoded string to a byte array for image rendering in RDLC reports.
+    ''' </summary>
+    ''' <param name="base64String">Base64 encoded string (with or without data URI prefix)</param>
+    ''' <returns>Byte array containing the decoded data, or a 1x1 black PNG on error</returns>
+    ''' <remarks>
+    ''' FEATURES:
+    ''' - Handles data URI prefixes (data:image/png;base64,...)
+    ''' - Automatically cleans whitespace, newlines, tabs
+    ''' - Auto-corrects padding issues (Base64 must be multiple of 4)
+    ''' - Returns fallback 1x1 black PNG on conversion errors
+    ''' - Useful for embedding images in RDLC reports from Base64 strings
+    ''' 
+    ''' COMMON USE CASES:
+    ''' - Display images stored as Base64 in database
+    ''' - Embed logos/signatures from web APIs
+    ''' - Convert Base64 from QR code generators
+    ''' 
+    ''' ERROR HANDLING:
+    ''' Returns a valid 1x1 black PNG image on any error, so reports won't crash.
+    ''' This provides visual feedback that conversion failed.
+    ''' </remarks>
+    ''' <example>
+    ''' ' In RDLC Report - Display Base64 image
+    ''' =Code.ConvertBase64ToBytes(Fields!LogoBase64.Value)
+    ''' 
+    ''' ' With data URI prefix
+    ''' =Code.ConvertBase64ToBytes("data:image/png;base64,iVBORw0KGgoAAAANS...")
+    ''' 
+    ''' ' Without prefix
+    ''' =Code.ConvertBase64ToBytes("iVBORw0KGgoAAAANS...")
+    ''' </example>
+    Public Function ConvertBase64ToBytes(ByVal base64String As String) As Byte()
+        If String.IsNullOrEmpty(base64String) Then
+            Return Nothing
+        End If
+        
+        Try
+            ' Remove potential data URI prefix if present
+            If base64String.Contains("data:image/") Then
+                base64String = base64String.Substring(base64String.IndexOf(",") + 1)
+            End If
+            
+            ' Remove any whitespace, newlines, tabs, or carriage returns
+            Dim cleanedString As String = base64String.Replace(vbCrLf, "").Replace(vbLf, "").Replace(vbCr, "").Replace(vbTab, "").Replace(" ", "+").Trim()
+            
+            ' Check if it's a valid length (Base64 must be multiple of 4)
+            Dim padding As Integer = cleanedString.Length Mod 4
+            If padding > 0 Then
+                cleanedString = cleanedString.PadRight(cleanedString.Length + (4 - padding), "="c)
+            End If
+            
+            Return System.Convert.FromBase64String(cleanedString)
+        Catch ex As Exception
+            ' Return a 1x1 black PNG as fallback to show something went wrong
+            Return New Byte() {137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 1, 0, 0, 0, 1, 8, 2, 0, 0, 0, 144, 119, 83, 222, 0, 0, 0, 12, 73, 68, 65, 84, 8, 153, 99, 96, 96, 96, 0, 0, 0, 4, 0, 1, 165, 202, 2, 30, 0, 0, 0, 0, 73, 69, 78, 68, 174, 66, 96, 130}
+        End Try
+    End Function
 End Class

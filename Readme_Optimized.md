@@ -71,6 +71,7 @@ Overall: 40-60% faster for typical reports
 - [Legacy NAV Way](#legacy-nav-way-setdata--getdata)
 - [String Manipulation Functions (OPTIMIZED)](#string-manipulation-functions-optimized)
 - [Number to Words Conversion (OPTIMIZED)](#number-to-words-conversion-optimized)
+- [Base64 to Image Conversion](#base64-to-image-conversion)
 - [Cache Management](#cache-management)
 - [Complete Usage Examples](#complete-usage-examples)
 - [Migration from Original Version](#migration-from-original-version)
@@ -567,6 +568,392 @@ Dim result As String = FL_NumberToWordsMinimised(150000)
 
 ---
 
+## Base64 to Image Conversion
+
+### ConvertBase64ToBytes
+
+Converts a Base64 encoded string to a byte array for displaying images in RDLC reports.
+
+**Parameters:**
+
+- `base64String` (String): Base64 encoded string (with or without data URI prefix)
+
+**Returns:**
+
+- Byte array containing the decoded image data
+- Returns `Nothing` if input is null/empty
+- Returns 1x1 black PNG on conversion errors (prevents report crashes)
+
+**Features:**
+
+- ✅ Handles data URI prefixes (`data:image/png;base64,...`)
+- ✅ Automatically cleans whitespace, newlines, tabs
+- ✅ Auto-corrects Base64 padding issues
+- ✅ Graceful error handling with fallback image
+- ✅ Perfect for embedding database images in reports
+
+```vb
+' In RDLC Report - Display Base64 logo
+=Code.ConvertBase64ToBytes(Fields!CompanyLogo.Value)
+
+' With data URI prefix
+=Code.ConvertBase64ToBytes(Fields!ImageDataURI.Value)
+
+' Digital signature
+=Code.ConvertBase64ToBytes(Code.GetVal("AuthorizedSignature")')
+```
+
+**Common Use Cases:**
+
+1. **Company Logos** - Store logo as Base64 in database
+2. **Digital Signatures** - Embed authorized signatures
+3. **QR Codes** - Display dynamically generated QR codes
+4. **Dynamic Images** - Images from web APIs or external sources
+
+**RDLC Setup:**
+
+1. Add an **Image** control to your report
+2. Set **Source** property to `Database`
+3. Set **Value** expression to: `=Code.ConvertBase64ToBytes(Fields!YourField.Value)`
+4. Set **MIMEType** to match your image format:
+   - `image/png` for PNG images
+   - `image/jpeg` for JPEG images
+   - `image/gif` for GIF images
+
+**Error Handling:**
+
+Returns a valid 1x1 black PNG on any conversion error, ensuring reports don't crash. The black square provides visual feedback that conversion failed.
+
+---
+
+### 📷 Image Display Methods
+
+RDLC reports support three methods for displaying images:
+
+#### Method 1: Database Source (Base64) - Use ConvertBase64ToBytes
+
+**Best for:** Images stored as Base64 strings in database, dynamic QR codes, signatures
+
+```xml
+<Image Name="CompanyLogo">
+  <Source>Database</Source>
+  <Value>=Code.ConvertBase64ToBytes(Fields!LogoBase64.Value)</Value>
+  <MIMEType>image/png</MIMEType>
+  <Sizing>Fit</Sizing>
+  <Height>3cm</Height>
+  <Width>8cm</Width>
+</Image>
+```
+
+**In AL/C/AL - Provide Base64 String:**
+
+```al
+column(LogoBase64; GetCompanyLogoAsBase64())
+{ }
+
+local procedure GetCompanyLogoAsBase64(): Text
+var
+    CompanyInfo: Record "Company Information";
+    Base64Convert: Codeunit "Base64 Convert";
+    TempBlob: Codeunit "Temp Blob";
+    InStr: InStream;
+begin
+    CompanyInfo.Get();
+    if CompanyInfo.Picture.HasValue then begin
+        CompanyInfo.CalcFields(Picture);
+        TempBlob.FromRecord(CompanyInfo, CompanyInfo.FieldNo(Picture));
+        TempBlob.CreateInStream(InStr);
+        exit(Base64Convert.ToBase64(InStr));
+    end;
+    exit('');
+end;
+```
+
+#### Method 2: External Source (File Path) - No Conversion Needed
+
+**Best for:** Images stored as files on disk, network shares, static images
+
+```xml
+<Image Name="ProductImage">
+  <Source>External</Source>
+  <Value>=Fields!ImageFilePath.Value</Value>
+  <MIMEType>image/png</MIMEType>
+  <Sizing>Fit</Sizing>
+  <Height>5cm</Height>
+  <Width>5cm</Width>
+</Image>
+```
+
+**Or with file: URI prefix:**
+```xml
+<Image Name="ProductImage">
+  <Source>External</Source>
+  <Value>="file:" &amp; Fields!ImageFilePath.Value</Value>
+  <MIMEType>image/png</MIMEType>
+  <Sizing>Fit</Sizing>
+</Image>
+```
+
+**In AL/C/AL - Provide File Path:**
+
+```al
+column(ImageFilePath; GetProductImagePath("No."))
+{ }
+
+local procedure GetProductImagePath(ItemNo: Code[20]): Text
+begin
+    // Return absolute file path
+    exit('C:\Images\Products\' + ItemNo + '.png');
+    
+    // Or network path
+    // exit('\\SERVER\Share\Images\' + ItemNo + '.png');
+end;
+```
+
+**Examples:**
+```vbnet
+' Absolute path
+="C:\Images\logo.png"
+
+' Network share
+="\\SERVER\Share\Images\logo.png"
+
+' With file: prefix
+="file:C:\Images\logo.png"
+
+' Dynamic path from field
+=Fields!ProductImagePath.Value
+
+' Concatenated path
+="C:\Products\" & Fields!ItemNo.Value & ".jpg"
+```
+
+#### Method 3: Hybrid Approach (Smart Switching)
+
+**Best for:** Supporting both Base64 and file paths dynamically
+
+```xml
+<Rectangle Name="ImageContainer">
+  <ReportItems>
+    <!-- Database Image (Base64) - Show if string is long -->
+    <Image Name="ImageDatabase">
+      <Source>Database</Source>
+      <Value>=Code.ConvertBase64ToBytes(Fields!ImageData.Value)</Value>
+      <MIMEType>image/png</MIMEType>
+      <Sizing>Fit</Sizing>
+      <Height>7.69cm</Height>
+      <Width>8.5cm</Width>
+      <Visibility>
+        <Hidden>=Len(Fields!ImageData.Value) &lt; 200</Hidden>
+      </Visibility>
+    </Image>
+    
+    <!-- External Image (File Path) - Show if string is short -->
+    <Image Name="ImageExternal">
+      <Source>External</Source>
+      <Value>="file:" &amp; Fields!ImageData.Value</Value>
+      <MIMEType>image/png</MIMEType>
+      <Sizing>Fit</Sizing>
+      <Left>9cm</Left>
+      <Height>7.69cm</Height>
+      <Width>8.5cm</Width>
+      <Visibility>
+        <Hidden>=Len(Fields!ImageData.Value) &gt;= 200</Hidden>
+      </Visibility>
+    </Image>
+  </ReportItems>
+</Rectangle>
+```
+
+**Logic:**
+- If `ImageData` length < 200: Treat as file path (External)
+- If `ImageData` length >= 200: Treat as Base64 (Database)
+
+**In AL/C/AL - Smart Data Provider:**
+
+```al
+column(ImageData; GetSmartImageData("No."))
+{ }
+
+local procedure GetSmartImageData(ItemNo: Code[20]): Text
+var
+    Item: Record Item;
+begin
+    Item.Get(ItemNo);
+    
+    // If image exists in database, return Base64
+    if Item.Picture.HasValue then
+        exit(GetItemPictureAsBase64(ItemNo));
+    
+    // Otherwise, return file path
+    exit('C:\Images\Items\' + ItemNo + '.png');
+end;
+```
+
+---
+
+### Comparison: Database vs External
+
+| Feature | Database (Base64) | External (File) |
+|---------|-------------------|-----------------|
+| **Function Required** | ✅ `ConvertBase64ToBytes` | ❌ No conversion needed |
+| **Storage** | In database/dataset | On disk/network |
+| **Performance** | Slower for large images | Faster (direct file read) |
+| **Memory** | Higher (data in memory) | Lower (streams from disk) |
+| **Best For** | Dynamic images, QR codes | Static images, large files |
+| **Portability** | Fully portable | Requires file access |
+| **File Access** | Not needed | Requires read permissions |
+
+---
+
+### External Image - Complete Examples
+
+#### Example 1: Product Catalog with File Images
+
+**AL Code:**
+
+```al
+dataitem(Item; Item)
+{
+    column(Description; Description)
+    { }
+    
+    column(ProductImagePath; GetProductImagePath("No."))
+    { }
+    
+    local procedure GetProductImagePath(ItemNo: Code[20]): Text
+    begin
+        // Images stored in C:\ProductImages\
+        exit('C:\ProductImages\' + ItemNo + '.jpg');
+    end;
+}
+```
+
+**RDLC:**
+
+```xml
+<Image Name="ProductImage">
+  <Source>External</Source>
+  <Value>=Fields!ProductImagePath.Value</Value>
+  <MIMEType>image/jpeg</MIMEType>
+  <Sizing>Fit</Sizing>
+  <Height>5cm</Height>
+  <Width>5cm</Width>
+</Image>
+```
+
+#### Example 2: Network Share Images
+
+**AL Code:**
+
+```al
+local procedure GetLogoPath(): Text
+var
+    CompanyInfo: Record "Company Information";
+begin
+    CompanyInfo.Get();
+    // Logo stored on network share
+    exit('\\FileServer\CompanyLogos\' + CompanyInfo."Primary Key" + '.png');
+end;
+```
+
+**RDLC:**
+
+```xml
+<Image Name="CompanyLogo">
+  <Source>External</Source>
+  <Value>="file:" &amp; Code.GetVal("LogoPath")'</Value>
+  <MIMEType>image/png</MIMEType>
+  <Sizing>Fit</Sizing>
+</Image>
+```
+
+#### Example 3: Conditional Image Display
+
+**RDLC - Show placeholder if file doesn't exist:**
+
+```xml
+<Rectangle Name="ImagePlaceholder">
+  <ReportItems>
+    <!-- Actual Image -->
+    <Image Name="ItemImage">
+      <Source>External</Source>
+      <Value>=Fields!ImagePath.Value</Value>
+      <Visibility>
+        <Hidden>=Fields!ImagePath.Value = ""</Hidden>
+      </Visibility>
+    </Image>
+    
+    <!-- Text when no image -->
+    <Textbox Name="NoImageText">
+      <Value>No Image Available</Value>
+      <Visibility>
+        <Hidden>=Fields!ImagePath.Value &lt;&gt; ""</Hidden>
+      </Visibility>
+      <Style>
+        <TextAlign>Center</TextAlign>
+      </Style>
+    </Textbox>
+  </ReportItems>
+</Rectangle>
+```
+
+---
+
+### Troubleshooting External Images
+
+#### Issue: Image Not Found
+
+**Symptoms:** Broken image icon or blank space
+
+**Solutions:**
+
+1. **Use Absolute Paths:**
+   ```vbnet
+   ="C:\Images\logo.png"  ' ✅ Good
+   ="Images\logo.png"      ' ❌ Bad - relative path
+   ```
+
+2. **Check File Exists:**
+   ```al
+   local procedure GetSafeImagePath(ItemNo: Code[20]): Text
+   var
+       FilePath: Text;
+       FileManagement: Codeunit "File Management";
+   begin
+       FilePath := 'C:\Images\' + ItemNo + '.png';
+       
+       // Return path only if file exists
+       if FileManagement.ClientFileExists(FilePath) then
+           exit(FilePath);
+       
+       // Return default/placeholder image
+       exit('C:\Images\NoImage.png');
+   end;
+   ```
+
+3. **Verify Permissions:**
+   - Report server needs read access to image folder
+   - Network paths require proper authentication
+
+4. **Use UNC Paths for Network Shares:**
+   ```vbnet
+   ="\\SERVER\Share\Images\logo.png"  ' ✅ UNC path
+   ="Z:\Images\logo.png"               ' ❌ Mapped drive may not work
+   ```
+
+#### Issue: Access Denied
+
+**Cause:** Report server lacks permissions
+
+**Solutions:**
+
+1. Grant read permissions to report server service account
+2. Use a shared location with public read access
+3. Consider using Base64 instead to avoid file system dependencies
+
+---
+
 ## Cache Management
 
 ### ClearCaches
@@ -639,6 +1026,9 @@ end;
 
 ' Number to words (95% faster for repeated values)
 =Code.ToWordsIn(Fields!TotalAmount.Value)
+
+' Base64 to image (with error handling)
+=Code.ConvertBase64ToBytes(Fields!CompanyLogo.Value)
 ```
 
 ---

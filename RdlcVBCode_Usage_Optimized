@@ -308,3 +308,91 @@ New String() {
 '   - Scales better with large datasets
 
 /**Migration Notes**/
+
+
+/**Base64 to Image Conversion**/
+
+' Convert Base64 string to byte array for image display in RDLC
+Code.ConvertBase64ToBytes("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==")
+
+'In RDLC Report - Display Base64 image from database field
+= Code.ConvertBase64ToBytes(Fields!CompanyLogo.Value)
+= Code.ConvertBase64ToBytes(Fields!SignatureBase64.Value)
+= Code.ConvertBase64ToBytes(Fields!QRCodeBase64.Value)
+
+'In RDLC Report - Handle data URI format (with prefix)
+= Code.ConvertBase64ToBytes(Fields!ImageDataURI.Value)
+' Automatically strips "data:image/png;base64," prefix
+
+' FEATURES:
+' - Auto-removes data URI prefixes (data:image/png;base64,...)
+' - Cleans whitespace, newlines, tabs
+' - Auto-corrects Base64 padding issues
+' - Returns 1x1 black PNG on error (report won't crash)
+
+' USE CASES:
+' 1. Company logo from database
+' 2. Digital signatures
+' 3. QR codes from external APIs
+' 4. Dynamic images from web services
+
+' ERROR HANDLING:
+' - Returns Nothing if input is null/empty
+' - Returns 1x1 black PNG if conversion fails
+' - Never crashes the report
+
+/**Base64 to Image Conversion**/
+
+
+/**Complete Example - Invoice with Logo and Signature**/
+
+' In AL/C/AL - Get Base64 images
+local procedure GetInvoiceGlobalData() KeyValueList : Text
+var
+    CompanyLogoBase64: Text;
+    SignatureBase64: Text;
+begin
+    // Get Base64 images from database or API
+    CompanyLogoBase64 := GetCompanyLogoAsBase64();
+    SignatureBase64 := GetAuthorizedSignatureAsBase64();
+    
+    // Add to global data
+    AddKeyValue(KeyValueList, 'CompanyName', CompanyInfo.Name);
+    AddKeyValue(KeyValueList, 'CompanyLogo', CompanyLogoBase64);
+    AddKeyValue(KeyValueList, 'AuthorizedSignature', SignatureBase64);
+end;
+
+//In RDLC Report - Display logo in header
+' Add Image control in header, set Source = "Database"
+' Set Value expression:
+= Code.ConvertBase64ToBytes(Code.GetVal("CompanyLogo")')
+' Set MIMEType: image/png (or image/jpeg)
+
+//In RDLC Report - Display signature in footer
+' Add Image control in footer, set Source = "Database"
+' Set Value expression:
+= Code.ConvertBase64ToBytes(Code.GetVal("AuthorizedSignature")')
+
+/**Complete Example**/
+
+
+/**Troubleshooting Base64 Conversion**/
+
+' ISSUE: Image not displaying
+' SOLUTION: Check MIMEType matches actual image format
+' - PNG images: MIMEType = "image/png"
+' - JPEG images: MIMEType = "image/jpeg"
+' - GIF images: MIMEType = "image/gif"
+
+' ISSUE: Black square appears instead of image
+' SOLUTION: Base64 conversion failed, check:
+' 1. Base64 string is valid
+' 2. String not truncated in database field
+' 3. No special characters corrupting the string
+
+' ISSUE: Image stretched or distorted
+' SOLUTION: Set Image properties correctly
+' - Sizing: Fit (maintains aspect ratio)
+' - Or use Clip, FitProportional based on needs
+
+/**Troubleshooting**/

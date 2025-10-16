@@ -528,3 +528,34 @@ Public Function FL_NumberToWordsMinimised(number As Long) As String
     
     Return words
 End Function
+
+' ==========================
+' Base64 Conversion Methods
+' ==========================
+
+Public Function ConvertBase64ToBytes(ByVal base64String As String) As Byte()
+    If String.IsNullOrEmpty(base64String) Then
+        Return Nothing
+    End If
+    
+    Try
+        ' Remove potential data URI prefix if present
+        If base64String.Contains("data:image/") Then
+            base64String = base64String.Substring(base64String.IndexOf(",") + 1)
+        End If
+        
+        ' Remove any whitespace, newlines, tabs, or carriage returns
+        Dim cleanedString As String = base64String.Replace(vbCrLf, "").Replace(vbLf, "").Replace(vbCr, "").Replace(vbTab, "").Replace(" ", "+").Trim()
+        
+        ' Check if it's a valid length (Base64 must be multiple of 4)
+        Dim padding As Integer = cleanedString.Length Mod 4
+        If padding > 0 Then
+            cleanedString = cleanedString.PadRight(cleanedString.Length + (4 - padding), "="c)
+        End If
+        
+        Return System.Convert.FromBase64String(cleanedString)
+    Catch ex As Exception
+        ' Return a 1x1 black PNG as fallback to show something went wrong
+        Return New Byte() {137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 1, 0, 0, 0, 1, 8, 2, 0, 0, 0, 144, 119, 83, 222, 0, 0, 0, 12, 73, 68, 65, 84, 8, 153, 99, 96, 96, 96, 0, 0, 0, 4, 0, 1, 165, 202, 2, 30, 0, 0, 0, 0, 73, 69, 78, 68, 174, 66, 96, 130}
+    End Try
+End Function
